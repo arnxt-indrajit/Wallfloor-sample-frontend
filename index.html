@@ -47,7 +47,7 @@
                     var distance = $("#distance-input").val();
                     $.ajax({
                         type: "POST",
-                        url: "http://127.0.0.1:5000/segment",
+                        url: "http://13.233.124.197:5000/segment",
                         data: JSON.stringify({"image": base64_image, "distance": distance}),
                         dataType: 'json',
                         contentType: 'application/json',
