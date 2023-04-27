@@ -1,115 +1,75 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Upload Pictures</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        text-align: center;
-        background-color: #f2f2f2;
-      }
+<head>
+    <title>Segmented Image</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Segmented Image</h1>
+        <form id="segment-form">
+            <div class="form-group">
+                <label for="img-file">Image File:</label>
+                <input type="file" class="form-control-file" id="img-file">
+            </div>
+            <div class="form-group">
+                <label for="distance-input">Distance from Wall:</label>
+                <input type="number" class="form-control" id="distance-input" required>
+            </div>
+            <div id="processing" style="display: none;">
+                <p>Processing...</p>
+                <div class="spinner-border" role="status">
+                  <span class="sr-only">Loading...</span>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Segment Image</button>
+        </form>
+        <div id="segmented-img-container" class="mt-5 d-none">
+            <h2>Segmented Image:</h2>
+            <img id="segmented-img" src="">
+        </div>
+    </div>
 
-      h1 {
-        margin-top: 50px;
-        color: #333;
-      }
-
-      form {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        margin-top: 30px;
-      }
-
-      input[type="file"] {
-        margin-bottom: 20px;
-      }
-
-      #preview {
-        max-width: 400px;
-        max-height: 400px;
-        margin-bottom: 20px;
-      }
-
-      button[type="submit"] {
-        padding: 10px 20px;
-        background-color: #008CBA;
-        color: #fff;
-        border: none;
-        border-radius: 5px;
-        font-size: 16px;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
-      }
-
-      button[type="submit"]:hover {
-        background-color: #005f6b;
-      }
-
-      #response {
-        margin-top: 20px;
-      }
-
-      #response.success {
-        color: green;
-      }
-
-      #response.error {
-        color: red;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>Upload Pictures</h1>
-    <form id="uploadForm">
-      <input type="file" name="picture" accept="image/*" capture onchange="previewImage(event)">
-      <br>
-      <img id="preview" src="#" alt="Image Preview">
-      <br>
-      <button type="submit">Upload</button>
-    </form>
-    <div id="response"></div>
     <script>
-      function previewImage(event) {
-        const preview = document.getElementById('preview');
-        preview.src = URL.createObjectURL(event.target.files[0]);
-        preview.onload = () => {
-          URL.revokeObjectURL(preview.src);
-        }
-      }
-
-      const form = document.getElementById('uploadForm');
-      const responseDiv = document.getElementById('response');
-
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const input = document.querySelector('input[type="file"]');
-        const file = input.files[0];
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onloadend = () => {
-          const base64data = reader.result.split(',')[1];
-          const url = 'https://gfvf9qsl06.execute-api.ap-south-1.amazonaws.com/floor_wall_web_prod/uploadimage';
-          const data = {
-            image: base64data,
-          };
-          fetch(url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data),
-          })
-            .then(response => response.json())
-            .then(result => {
-              responseDiv.innerHTML = `<p class="success">Image uploaded successfully! URL: ${result.imageUrl}</p>`;
-            })
-            .catch(error => {
-              console.error('Error:', error);
-              responseDiv.innerHTML = `<p class="error">There was an error uploading the image.</p>`;
+        $(document).ready(function() {
+            $("#segment-form").submit(function(e) {
+                e.preventDefault();
+                $("#processing").show(); // show processing animation
+                var img_file = $("#img-file")[0].files[0];
+                var reader = new FileReader();
+                reader.onloadend = function() {
+                    var base64_image = reader.result;
+                    var distance = $("#distance-input").val();
+                    $.ajax({
+                        type: "POST",
+                        url: "http://127.0.0.1:5000/segment",
+                        data: JSON.stringify({"image": base64_image, "distance": distance}),
+                        dataType: 'json',
+                        contentType: 'application/json',
+                        success: function(response) {
+                            var img = new Image();
+                            console.log(response.segmented_image_url);
+                            img.onload = function() {
+                                $("#segmented-img").attr("src", response.segmented_image_url);
+                                $("#segmented-img-container").removeClass("d-none");
+                                $("#processing").hide(); // hide processing animation
+                            };
+                            img.src = response.segmented_image_url;
+                        },
+                        error: function(xhr, status, error) {
+                            console.log(xhr.responseText);
+                            $("#processing").hide(); // hide processing animation
+                        }
+                    });
+                }
+                reader.readAsDataURL(img_file);
             });
-        }
-      });
+        });
     </script>
-  </body>
+</body>
 </html>
